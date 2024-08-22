@@ -1,18 +1,22 @@
 import jwt from "jsonwebtoken";
 import { createError } from "../utils/error.js";
 
-export const verifyToken = (req, res, next) => {
-  const token = req.cookies.access_token;
-  if (!token) {
-    return next(createError(401, "You are not authenticated!"));
-  }
+export function verifyToken(req, res, next) {
+  // Get token from header, the client should be responsible for sending the token
+  const token =
+    req.header("Authorization").split(" ")[1] ||
+    req.header("authorization").split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Access denied" });
 
-  jwt.verify(token, process.env.JWT, (err, user) => {
-    if (err) return next(createError(403, "Token is not valid!"));
-    req.user = user;
-    next();
-  });
-};
+  try {
+    const decoded = jwt.verify(token, "mySecret"); // Verify token
+    req.userId = decoded.userId; // Add userId to request object
+    next(); // Call next middleware
+  } catch (error) {
+    console.log(error);
+    res.status(401).json({ error: "Invalid token" });
+  }
+}
 
 export const verifyUser = (req, res, next) => {
   verifyToken(req, res, next, () => {
