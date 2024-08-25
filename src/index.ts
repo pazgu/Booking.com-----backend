@@ -3,15 +3,39 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import authRoute from "./routes/auth.routes";
 import usersRoute from "./routes/users.routes";
-import hotelsRoute from "./routes/hotels.routes";
+import { createConnection } from "mysql2";
+// import hotelsRoute from "./routes/hotels.routes";
 // import roomsRoute from "./routes/rooms.routes";
 import cors from "cors";
-
+import { createError } from "./utils/error"; // Assuming this exists in utils folder
 dotenv.config();
-
+const SQLPORT = process.env.SQLPORT || 20285;
 const app = express();
 const PORT = process.env.PORT || 3000;
+const connection = createConnection({
+  host: process.env.AIVAN_HOST,
+  user: process.env.AIVAN_USERNAME,
+  password: process.env.AIVAN_PASSWORD,
+  database: process.env.AIVAN_DB,
+  connectTimeout: 30000,
+  port: 20285,
+  ssl: {
+    rejectUnauthorized: true,
+    ca: process.env.CA_Certificate,
+  },
+});
 
+connection.connect((err) => {
+  if (err) {
+    console.error("Error connecting to the MySQL database:", err);
+  } else {
+    console.log("Successfully connected to the MySQL database");
+  }
+  connection.end(); // Close the connection after testing
+});
+app.listen(SQLPORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 // Connect to MongoDB
 const connect = async () => {
   try {
@@ -34,7 +58,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRoute);
 app.use("/api/users", usersRoute);
-app.use("/api/hotels", hotelsRoute);
+// app.use("/api/hotels", hotelsRoute);
 // app.use("/api/rooms", roomsRoute);
 
 // Centralized Error Handling Middleware
