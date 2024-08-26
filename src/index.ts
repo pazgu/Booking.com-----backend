@@ -7,6 +7,9 @@ import { createConnection } from "mysql2";
 import cors from "cors";
 import { createError } from "./utils/error"; // Assuming this exists in utils folder
 import hotelRoutes from "./routes/hotels.routes";
+import reservationRoutes from "./routes/reservations.route";
+import { verifyToken } from "./middleware/auth.middleware";
+import reviewRoutes from "./routes/reviews.routes";
 
 dotenv.config();
 
@@ -62,6 +65,8 @@ async function main() {
   app.use("/api/auth", authRoute);
   app.use("/api/users", usersRoute);
   app.use("/api/hotels", hotelRoutes);
+  app.use("/api/reservations", verifyToken, reservationRoutes)
+  app.use("/api/reviews", verifyToken , reviewRoutes) 
 
   // Centralized Error Handling Middleware
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {

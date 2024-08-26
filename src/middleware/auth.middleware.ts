@@ -20,7 +20,7 @@ export function verifyToken(
   if (!token) return next(createError(401, "Access denied."));
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+    const decoded = jwt.verify(token, process.env.JWT as string) as {
       userId: string;
     };
     req.userId = decoded.userId; // Attach the userId to the request object
