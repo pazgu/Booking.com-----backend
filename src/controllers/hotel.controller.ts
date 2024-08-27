@@ -2,6 +2,15 @@ import { Request, Response } from "express";
 import { db } from "..";
 import { QueryError, RowDataPacket, FieldPacket } from "mysql2";
 
+// Utility function to calculate the number of nights between two dates
+const calculateNumberOfNights = (startDate: Date, endDate: Date): number => {
+  const oneDay = 24 * 60 * 60 * 1000; // milliseconds in a day
+  const diffDays = Math.round(
+    Math.abs((endDate.getTime() - startDate.getTime()) / oneDay)
+  );
+  return diffDays;
+};
+
 // Get hotels with filtering and pagination
 export const getHotels = async (req: Request, res: Response) => {
   const {
@@ -15,6 +24,7 @@ export const getHotels = async (req: Request, res: Response) => {
     priceMax,
     freeCancellation,
     prepayment,
+    distanceMax,
     meals,
     starsRating,
     facilities,
@@ -27,21 +37,38 @@ export const getHotels = async (req: Request, res: Response) => {
 
   try {
     let query = `
-      SELECT DISTINCT h.id, h.name, h.city, h.price, 
+      SELECT DISTINCT h.id, h.name, h.city, rph.price, r.type,
                       h.freeCancellation, h.prepayment, h.scoreLetter, 
-                      h.starsRating, h.scoreLetter, h.meals
+                      h.starsRating, h.meals, h.distance, h.image,
+                      ROUND(avg.avgRating, 1) AS avgRating,
+                      (
+                        rph.price * ? * ?
+                      ) AS totalPrice
       FROM Hotels h
       JOIN RoomsPerHotel rph ON h.id = rph.HotelID
       JOIN Rooms r ON rph.RoomID = r.id
-      LEFT JOIN Reservations res ON rph.RoomID = res.RoomID 
-                                  AND h.id = res.HotelID 
+      LEFT JOIN AVGRating avg ON h.id = avg.hotelID
+      LEFT JOIN Reservations res ON res.HotelID = rph.HotelID 
+                                  AND res.RoomID = rph.RoomID 
                                   AND (res.startDate < ? AND res.endDate > ?)
       WHERE 1=1
     `;
     const queryParams: (string | number)[] = [
+      parseInt(numOfRooms as string, 1) || 1, // Default to 1 if numOfRooms is not provided
+      parseInt(numOfRooms as string, 1) || 1, // Default to 1 if numOfRooms is not provided
       startDate as string,
       endDate as string,
     ];
+
+    // Calculate number of nights from startDate and endDate
+    const numOfNights =
+      startDate && endDate
+        ? calculateNumberOfNights(
+            new Date(startDate as string),
+            new Date(endDate as string)
+          )
+        : 1;
+    queryParams[0] = numOfNights;
 
     if (name) {
       query += " AND h.name LIKE ?";
@@ -52,11 +79,11 @@ export const getHotels = async (req: Request, res: Response) => {
       queryParams.push(`%${city}%`);
     }
     if (priceMin) {
-      query += " AND h.price >= ?";
+      query += " AND rph.price >= ?";
       queryParams.push(parseFloat(priceMin as string));
     }
     if (priceMax) {
-      query += " AND h.price <= ?";
+      query += " AND rph.price <= ?";
       queryParams.push(parseFloat(priceMax as string));
     }
     if (freeCancellation === "true") {
@@ -67,9 +94,13 @@ export const getHotels = async (req: Request, res: Response) => {
       query += " AND h.prepayment = ?";
       queryParams.push(1);
     }
+    if (distanceMax) {
+      query += " AND h.distance <= ?";
+      queryParams.push(parseInt(distanceMax as string));
+    }
     if (meals) {
       const mealsList = (meals as string).split(",");
-      query += ` AND meals IN (${mealsList.map(() => "?").join(",")})`;
+      query += ` AND h.meals IN (${mealsList.map(() => "?").join(",")})`;
       queryParams.push(...mealsList);
     }
     if (starsRating) {
@@ -103,54 +134,49 @@ export const getHotels = async (req: Request, res: Response) => {
     // Filtering by room availability
     if (numOfPeople || numOfRooms || startDate || endDate) {
       query += `
-    AND EXISTS (
-      SELECT 1
-      FROM RoomsPerHotel rph
-      JOIN Rooms r ON rph.RoomID = r.id
-      WHERE rph.HotelID = h.id
-  `;
-
-      if (numOfPeople) {
-        query += " AND r.capacity >= ?";
-        queryParams.push(parseInt(numOfPeople as string));
-      }
-
-      if (startDate && endDate) {
-        query += `
-      AND (
-        rph.initial_quantity - COALESCE(
-          (SELECT SUM(res.quantity)
-           FROM Reservations res
-           WHERE res.HotelID = h.id
-             AND res.RoomID = rph.RoomID
-             AND (
-               (res.startDate <= ? AND res.endDate > ?)
-               OR (res.startDate < ? AND res.endDate >= ?)
-               OR (res.startDate >= ? AND res.endDate <= ?)
-             )
-          ), 0
-        ) >= ?
-      )
-    `;
-        queryParams.push(
-          endDate as string,
-          startDate as string,
-          endDate as string,
-          startDate as string,
-          startDate as string,
-          endDate as string,
-          numOfRooms ? parseInt(numOfRooms as string) : 1
-        );
-      }
-
-      query += ")";
+        AND EXISTS (
+          SELECT 1
+          FROM RoomsPerHotel rph
+          LEFT JOIN Reservations res ON res.HotelID = rph.HotelID
+                                     AND res.RoomID = rph.RoomID
+                                     AND (res.startDate < ? AND res.endDate > ?)
+          GROUP BY rph.HotelID
+          HAVING SUM(rph.initial_quantity) - COALESCE(SUM(res.quantity), 0) >= ?
+        )
+      `;
+      queryParams.push(
+        endDate as string,
+        startDate as string,
+        numOfRooms ? parseInt(numOfRooms as string) : 1
+      );
     }
+
     // Sorting
     if (sortBy) {
-      query += ` ORDER BY ${sortBy} ${sortOrder}`;
+      switch (sortBy) {
+        case "price":
+          query += ` ORDER BY totalPrice ${sortOrder}`; // low to high
+          break;
+        case "distance":
+          query += ` ORDER BY h.distance ${sortOrder}`; // close to far
+          break;
+        case "rating":
+          query += ` ORDER BY h.scoreLetter ${sortOrder}`; // high to low
+          break;
+        default:
+          query += ` ORDER BY h.id ASC`; // default
+          break;
+      }
     } else {
       query += " ORDER BY h.id ASC"; // default
     }
+
+    // Total count
+    const countQuery = `SELECT COUNT(*) as totalCount FROM (${query}) as subquery`;
+    const [countRows] = await db
+      .promise()
+      .query<RowDataPacket[]>(countQuery, queryParams);
+    const totalCount = countRows[0].totalCount;
 
     // Pagination
     query += " LIMIT ? OFFSET ?";
@@ -159,7 +185,7 @@ export const getHotels = async (req: Request, res: Response) => {
     const [rows] = await db
       .promise()
       .query<RowDataPacket[]>(query, queryParams);
-    res.json(rows);
+    res.json({ totalCount, data: rows });
   } catch (error) {
     console.error("Error fetching hotels:", error);
     res.status(500).json({ message: "Server error" });
