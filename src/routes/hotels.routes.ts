@@ -8,7 +8,7 @@ hotelRoutes.get("/test", (req, res) => {
 });
 
 hotelRoutes.get("/", getHotels);
-// hotelRoutes.get("/:id", getHotelByID);
+hotelRoutes.get("/:id", getHotelByID);
 // router.put("/availability", updateRoomAvailability); // Updating room availability
 
 export default hotelRoutes;
