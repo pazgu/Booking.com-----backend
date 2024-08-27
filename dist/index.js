@@ -12,6 +12,9 @@ const users_routes_1 = __importDefault(require("./routes/users.routes"));
 const mysql2_1 = require("mysql2");
 const cors_1 = __importDefault(require("cors"));
 const hotels_routes_1 = __importDefault(require("./routes/hotels.routes"));
+const reservations_route_1 = __importDefault(require("./routes/reservations.route"));
+const auth_middleware_1 = require("./middleware/auth.middleware");
+const reviews_routes_1 = __importDefault(require("./routes/reviews.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +63,8 @@ async function main() {
     app.use("/api/auth", auth_routes_1.default);
     app.use("/api/users", users_routes_1.default);
     app.use("/api/hotels", hotels_routes_1.default);
+    app.use("/api/reservations", auth_middleware_1.verifyToken, reservations_route_1.default);
+    app.use("/api/reviews", auth_middleware_1.verifyToken, reviews_routes_1.default);
     // Centralized Error Handling Middleware
     app.use((err, req, res, next) => {
         const status = err.status || 500;

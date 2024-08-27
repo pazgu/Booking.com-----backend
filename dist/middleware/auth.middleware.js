@@ -16,9 +16,9 @@ function verifyToken(req, res, next) {
     if (!token)
         return next((0, error_1.createError)(401, "Access denied."));
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT);
         req.userId = decoded.userId; // Attach the userId to the request object
-        console.log("User ID from token:", req.userId);
+        // console.log("User ID from token:", req.userId);
         next(); // Call the next middleware
     }
     catch (error) {
