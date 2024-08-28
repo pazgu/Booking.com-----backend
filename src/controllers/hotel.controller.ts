@@ -11,7 +11,13 @@ const calculateNumberOfNights = (startDate: Date, endDate: Date): number => {
   return diffDays;
 };
 
-// Get hotels with filtering and pagination
+// Utility function to validate and parse date
+const parseDate = (dateString: string): Date | null => {
+  const date = new Date(dateString);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+// Get hotels with filtering and pagination, returning only standard rooms
 export const getHotels = async (req: Request, res: Response) => {
   const {
     numOfPeople,
@@ -48,19 +54,24 @@ export const getHotels = async (req: Request, res: Response) => {
       JOIN RoomsPerHotel rph ON h.id = rph.HotelID
       JOIN Rooms r ON rph.RoomID = r.id
       LEFT JOIN AVGRating avg ON h.id = avg.hotelID
-      WHERE 1=1
+      WHERE r.type = 'Standard Room'
     `;
 
     // Default to 1 if numOfRooms or numOfPeople is not provided
     const numRooms = parseInt(numOfRooms as string) || 1;
     const numPeople = parseInt(numOfPeople as string) || 1;
-    const numNights =
-      startDate && endDate
-        ? calculateNumberOfNights(
-            new Date(startDate as string),
-            new Date(endDate as string)
-          )
-        : 1;
+
+    // Validate and parse dates
+    const parsedStartDate = startDate ? parseDate(startDate as string) : null;
+    const parsedEndDate = endDate ? parseDate(endDate as string) : null;
+
+    let numNights = 1;
+    if (parsedStartDate && parsedEndDate) {
+      numNights = calculateNumberOfNights(parsedStartDate, parsedEndDate);
+    } else {
+      // Handle invalid date input
+      console.warn("Invalid date input. Using default of 1 night.");
+    }
 
     const queryParams: (string | number)[] = [numNights, numRooms, numPeople];
 
@@ -133,7 +144,6 @@ export const getHotels = async (req: Request, res: Response) => {
           break;
         case "distance":
           query += ` ORDER BY h.distance ${sortOrder}`; // close to far
-          break;
         case "rating":
           query += ` ORDER BY h.scoreLetter ${sortOrder}`; // high to low
           break;
