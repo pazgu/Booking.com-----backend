@@ -1,5 +1,8 @@
 import express from "express";
-import { getHotelByID, getHotels } from "../controllers/hotel.controller";
+import {
+  getHotels,
+  getHotelDetailsWithAvailableRooms,
+} from "../controllers/hotel.controller";
 
 const hotelRoutes = express.Router();
 hotelRoutes.get("/test", (req, res) => {
@@ -8,7 +11,7 @@ hotelRoutes.get("/test", (req, res) => {
 });
 
 hotelRoutes.get("/", getHotels);
-hotelRoutes.get("/:id", getHotelByID);
+hotelRoutes.get("/:id", getHotelDetailsWithAvailableRooms);
 // router.put("/availability", updateRoomAvailability); // Updating room availability
 
 export default hotelRoutes;

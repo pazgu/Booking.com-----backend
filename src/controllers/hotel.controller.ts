@@ -180,80 +180,127 @@ interface Review {
   text: string;
   userId: string;
 }
-export const getHotelByID = (req: Request, res: Response): void => {
+
+export const getHotelDetailsWithAvailableRooms = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const id = req.params.id;
-  const sql = `
-    SELECT 
-      Hotels.*, 
-      AVGRating.*,
-      GROUP_CONCAT(DISTINCT CONCAT(FacilitiesTable.id, ':', FacilitiesTable.category, ':', FacilitiesTable.name)) AS facilities,
-      JSON_ARRAYAGG(
-        JSON_OBJECT(
-          'text', UserReview.text,
-          'userId', UserReview.userID
+  const { startDate, endDate } = req.query;
+
+  if (!id || !startDate || !endDate) {
+    res.status(400).json({ message: "Missing required parameters" });
+    return;
+  }
+
+  const parsedStartDate = parseDate(startDate as string);
+  const parsedEndDate = parseDate(endDate as string);
+
+  if (!parsedStartDate || !parsedEndDate) {
+    res.status(400).json({ message: "Invalid date format" });
+    return;
+  }
+
+  try {
+    // Query for hotel details
+    const hotelQuery = `
+      SELECT 
+        Hotels.*, 
+        AVGRating.*,
+        GROUP_CONCAT(DISTINCT CONCAT(FacilitiesTable.id, ':', FacilitiesTable.category, ':', FacilitiesTable.name)) AS facilities,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'text', UserReview.text,
+            'userId', UserReview.userID
+          )
+        ) AS reviews
+      FROM Hotels 
+      LEFT JOIN AVGRating ON Hotels.id = AVGRating.hotelID
+      LEFT JOIN HotelFacilities ON Hotels.id = HotelFacilities.hotelID
+      LEFT JOIN FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
+      LEFT JOIN UserReview ON Hotels.id = UserReview.hotelID
+      WHERE Hotels.id = ?
+      GROUP BY Hotels.id
+    `;
+
+    // Query for available rooms
+    const roomsQuery = `
+      SELECT r.id, r.type, r.description, r.capacity, rph.price,
+             rph.initial_quantity - COALESCE(SUM(res.quantity), 0) as available_rooms
+      FROM Rooms r
+      JOIN RoomsPerHotel rph ON r.id = rph.RoomID
+      LEFT JOIN Reservations res ON rph.HotelID = res.HotelID AND rph.RoomID = res.RoomID
+        AND (
+          (res.startDate <= ? AND res.endDate > ?) OR
+          (res.startDate < ? AND res.endDate >= ?) OR
+          (res.startDate >= ? AND res.endDate <= ?)
         )
-      ) AS reviews
-    FROM Hotels 
-    LEFT JOIN AVGRating ON Hotels.id = AVGRating.hotelID
-    LEFT JOIN HotelFacilities ON Hotels.id = HotelFacilities.hotelID
-    LEFT JOIN FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
-    LEFT JOIN UserReview ON Hotels.id = UserReview.hotelID
-    WHERE Hotels.id = ?
-    GROUP BY Hotels.id`;
+      WHERE rph.HotelID = ?
+      GROUP BY r.id, r.type, r.description, r.capacity, rph.price, rph.initial_quantity
+      HAVING available_rooms > 0
+      ORDER BY rph.price ASC
+    `;
 
-  db.query(
-    sql,
-    [id],
-    (
-      err: QueryError | null,
-      result: RowDataPacket[],
-      fields: FieldPacket[]
-    ) => {
-      if (err) {
-        console.error("Error fetching hotel by id:", err);
-        res.status(500).json({ error: "Server error", details: err.message });
-        return;
-      }
-      if (result.length === 0) {
-        res.status(404).json({ error: "Hotel not found" });
-        return;
-      }
+    // Execute both queries concurrently
+    const [hotelResult, roomsResult] = await Promise.all([
+      db.promise().query<RowDataPacket[]>(hotelQuery, [id]),
+      db
+        .promise()
+        .query<RowDataPacket[]>(roomsQuery, [
+          parsedEndDate,
+          parsedStartDate,
+          parsedEndDate,
+          parsedEndDate,
+          parsedStartDate,
+          parsedEndDate,
+          id,
+        ]),
+    ]);
 
-      const hotel = result[0];
+    if (hotelResult[0].length === 0) {
+      res.status(404).json({ error: "Hotel not found" });
+      return;
+    }
 
-      // Parse the facilities string into an array of objects
-      if (typeof hotel.facilities === "string" && hotel.facilities.length > 0) {
-        hotel.facilities = hotel.facilities
-          .split(",")
-          .map((facility: string) => {
-            const [id, category, name] = facility.split(":");
-            return { id, category, name };
-          });
-      } else {
-        hotel.facilities = [];
-      }
+    const hotel = hotelResult[0][0];
+    const availableRooms = roomsResult[0];
 
-      // Parse the reviews JSON string into an array of objects
-      if (typeof hotel.reviews === "string") {
-        try {
-          hotel.reviews = JSON.parse(hotel.reviews);
-        } catch (e) {
-          console.error("Error parsing reviews JSON:", e);
-          hotel.reviews = [];
-        }
-      } else if (!Array.isArray(hotel.reviews)) {
+    // Parse the facilities string into an array of objects
+    if (typeof hotel.facilities === "string" && hotel.facilities.length > 0) {
+      hotel.facilities = hotel.facilities.split(",").map((facility: string) => {
+        const [id, category, name] = facility.split(":");
+        return { id, category, name };
+      });
+    } else {
+      hotel.facilities = [];
+    }
+
+    // Parse the reviews JSON string into an array of objects
+    if (typeof hotel.reviews === "string") {
+      try {
+        hotel.reviews = JSON.parse(hotel.reviews);
+      } catch (e) {
+        console.error("Error parsing reviews JSON:", e);
         hotel.reviews = [];
       }
-
-      // Ensure hotel.reviews is typed correctly as an array of Review objects
-      hotel.reviews = hotel.reviews.filter(
-        (review: Review | null) => review !== null
-      );
-
-      // Log the hotel object for debugging
-      console.log("Hotel object:", JSON.stringify(hotel, null, 2));
-
-      res.status(200).json(hotel);
+    } else if (!Array.isArray(hotel.reviews)) {
+      hotel.reviews = [];
     }
-  );
+
+    // Ensure hotel.reviews is typed correctly as an array of Review objects
+    hotel.reviews = hotel.reviews.filter(
+      (review: Review | null) => review !== null
+    );
+
+    // Combine hotel details with available rooms
+    const result = {
+      ...hotel,
+      availableRooms,
+    };
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching hotel details with available rooms:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
