@@ -42,33 +42,27 @@ export const getHotels = async (req: Request, res: Response) => {
                       h.starsRating, h.meals, h.distance, h.image,
                       ROUND(avg.avgRating, 1) AS avgRating,
                       (
-                        rph.price * ? * ?
+                        rph.price * ? * ? * ?
                       ) AS totalPrice
       FROM Hotels h
       JOIN RoomsPerHotel rph ON h.id = rph.HotelID
       JOIN Rooms r ON rph.RoomID = r.id
       LEFT JOIN AVGRating avg ON h.id = avg.hotelID
-      LEFT JOIN Reservations res ON res.HotelID = rph.HotelID 
-                                  AND res.RoomID = rph.RoomID 
-                                  AND (res.startDate < ? AND res.endDate > ?)
       WHERE 1=1
     `;
-    const queryParams: (string | number)[] = [
-      parseInt(numOfRooms as string, 1) || 1, // Default to 1 if numOfRooms is not provided
-      parseInt(numOfRooms as string, 1) || 1, // Default to 1 if numOfRooms is not provided
-      startDate as string,
-      endDate as string,
-    ];
 
-    // Calculate number of nights from startDate and endDate
-    const numOfNights =
+    // Default to 1 if numOfRooms or numOfPeople is not provided
+    const numRooms = parseInt(numOfRooms as string) || 1;
+    const numPeople = parseInt(numOfPeople as string) || 1;
+    const numNights =
       startDate && endDate
         ? calculateNumberOfNights(
             new Date(startDate as string),
             new Date(endDate as string)
           )
         : 1;
-    queryParams[0] = numOfNights;
+
+    const queryParams: (string | number)[] = [numNights, numRooms, numPeople];
 
     if (name) {
       query += " AND h.name LIKE ?";
@@ -129,26 +123,6 @@ export const getHotels = async (req: Request, res: Response) => {
         .map(() => "?")
         .join(",")})`;
       queryParams.push(...scoreLetterList);
-    }
-
-    // Filtering by room availability
-    if (numOfPeople || numOfRooms || startDate || endDate) {
-      query += `
-        AND EXISTS (
-          SELECT 1
-          FROM RoomsPerHotel rph
-          LEFT JOIN Reservations res ON res.HotelID = rph.HotelID
-                                     AND res.RoomID = rph.RoomID
-                                     AND (res.startDate < ? AND res.endDate > ?)
-          GROUP BY rph.HotelID
-          HAVING SUM(rph.initial_quantity) - COALESCE(SUM(res.quantity), 0) >= ?
-        )
-      `;
-      queryParams.push(
-        endDate as string,
-        startDate as string,
-        numOfRooms ? parseInt(numOfRooms as string) : 1
-      );
     }
 
     // Sorting
