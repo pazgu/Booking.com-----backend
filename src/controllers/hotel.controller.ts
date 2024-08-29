@@ -204,9 +204,10 @@ export const getHotelDetailsWithAvailableRooms = async (
   try {
     // Query for hotel details
     const hotelQuery = `
-      SELECT 
+    SELECT 
         Hotels.*, 
         AVGRating.*,
+        JSON_ARRAYAGG(Images.ImageURL) AS imageURLs,
         GROUP_CONCAT(DISTINCT CONCAT(FacilitiesTable.id, ':', FacilitiesTable.category, ':', FacilitiesTable.name)) AS facilities,
         JSON_ARRAYAGG(
           JSON_OBJECT(
@@ -214,13 +215,14 @@ export const getHotelDetailsWithAvailableRooms = async (
             'userId', UserReview.userID
           )
         ) AS reviews
-      FROM Hotels 
-      LEFT JOIN AVGRating ON Hotels.id = AVGRating.hotelID
-      LEFT JOIN HotelFacilities ON Hotels.id = HotelFacilities.hotelID
-      LEFT JOIN FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
-      LEFT JOIN UserReview ON Hotels.id = UserReview.hotelID
-      WHERE Hotels.id = ?
-      GROUP BY Hotels.id
+    FROM Hotels 
+    LEFT JOIN AVGRating ON Hotels.id = AVGRating.hotelID
+    LEFT JOIN HotelFacilities ON Hotels.id = HotelFacilities.hotelID
+    LEFT JOIN FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
+    LEFT JOIN UserReview ON Hotels.id = UserReview.hotelID
+    LEFT JOIN Images ON Hotels.id = Images.HotelID
+    WHERE Hotels.id = ?
+    GROUP BY Hotels.id
     `;
 
     // Query for available rooms
