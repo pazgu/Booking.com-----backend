@@ -43,7 +43,7 @@ export const getHotels = async (req: Request, res: Response) => {
 
   try {
     let query = `
-      SELECT DISTINCT h.id, h.name, h.city, rph.price, r.type, h.reviews, avg.location,
+      SELECT DISTINCT h.id, h.name, h.city, rph.price, r.type, h.reviews, h.latitude, h.longitude, avg.location,
                       h.freeCancellation, h.prepayment, h.scoreLetter, 
                       h.starsRating, h.meals, h.distance, h.image,
                       ROUND(avg.avgRating, 1) AS avgRating,
