@@ -1,27 +1,57 @@
 import { db } from "..";
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { Request, Response } from "express";
 
 export const addReview = (req: Request, res: Response) => {
-    const { hotelID, staff, facilities, cleanliness, freeWifi, location, valueForMoney, comfort, text, userID } = req.body;
+  const {
+    hotelID,
+    staff,
+    facilities,
+    cleanliness,
+    freeWifi,
+    location,
+    valueForMoney,
+    comfort,
+    text,
+    userID,
+    date,
+  } = req.body;
 
-    // Insert the new review
-    const insertQuery = `
-        INSERT INTO UserReview (hotelID, staff, facilities, cleanliness, freeWifi, location, valueForMoney, comfort, text, userID)
+  // Insert the new review
+  const insertQuery = `
+        INSERT INTO UserReview (hotelID, staff, facilities, cleanliness, freeWifi, location, valueForMoney, comfort, text, userID, date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    db.query(insertQuery, [hotelID, staff, facilities, cleanliness, freeWifi, location, valueForMoney, comfort, text, userID], 
-        (err, result: ResultSetHeader) => {
-            if (err) {
-                console.error("Error inserting review:", err);
-                return res.status(500).json({ error: "Error inserting review", details: err.message });
-            }
+  db.query(
+    insertQuery,
+    [
+      hotelID,
+      staff,
+      facilities,
+      cleanliness,
+      freeWifi,
+      location,
+      valueForMoney,
+      comfort,
+      text,
+      userID,
+      date,
+    ],
+    (err, result: ResultSetHeader) => {
+      if (err) {
+        console.error("Error inserting review:", err);
+        return res
+          .status(500)
+          .json({ error: "Error inserting review", details: err.message });
+      }
 
-            console.log("Review inserted successfully. Proceeding to update average ratings.");
+      console.log(
+        "Review inserted successfully. Proceeding to update average ratings."
+      );
 
-            // Calculate new averages and update AVGRATING table
-            const updateQuery = `
+      // Calculate new averages and update AVGRATING table
+      const updateQuery = `
                 INSERT INTO AVGRating (hotelID, staff, facilities, cleanliness, freeWifi, location, valueForMoney, comfort, avgRating)
                 SELECT 
                     ?,
@@ -46,15 +76,24 @@ export const addReview = (req: Request, res: Response) => {
                     avgRating = VALUES(avgRating)
             `;
 
-            db.query(updateQuery, [hotelID, hotelID], (updateErr, updateResult: RowDataPacket[]) => {
-                if (updateErr) {
-                    console.error("Error updating average ratings:", updateErr);
-                    return res.status(500).json({ error: "Error updating average ratings", details: updateErr.message });
-                }
-
-                console.log("Average ratings updated successfully:", updateResult);
-                res.status(200).json({ message: "Review added and average ratings updated successfully" });
+      db.query(
+        updateQuery,
+        [hotelID, hotelID],
+        (updateErr, updateResult: RowDataPacket[]) => {
+          if (updateErr) {
+            console.error("Error updating average ratings:", updateErr);
+            return res.status(500).json({
+              error: "Error updating average ratings",
+              details: updateErr.message,
             });
+          }
+
+          console.log("Average ratings updated successfully:", updateResult);
+          res.status(200).json({
+            message: "Review added and average ratings updated successfully",
+          });
         }
-    );
+      );
+    }
+  );
 };

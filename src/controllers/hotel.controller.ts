@@ -205,24 +205,51 @@ export const getHotelDetailsWithAvailableRooms = async (
     // Query for hotel details
     const hotelQuery = `
     SELECT 
-        Hotels.*, 
-        AVGRating.*,
-        JSON_ARRAYAGG(Images.ImageURL) AS imageURLs,
-        GROUP_CONCAT(DISTINCT CONCAT(FacilitiesTable.id, ':', FacilitiesTable.category, ':', FacilitiesTable.name)) AS facilities,
-        JSON_ARRAYAGG(
-          JSON_OBJECT(
-            'text', UserReview.text,
-            'userId', UserReview.userID
-          )
-        ) AS reviews
-    FROM Hotels 
-    LEFT JOIN AVGRating ON Hotels.id = AVGRating.hotelID
-    LEFT JOIN HotelFacilities ON Hotels.id = HotelFacilities.hotelID
-    LEFT JOIN FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
-    LEFT JOIN UserReview ON Hotels.id = UserReview.hotelID
-    LEFT JOIN Images ON Hotels.id = Images.HotelID
-    WHERE Hotels.id = ?
-    GROUP BY Hotels.id
+    Hotels.*,
+    AVGRating.*,
+    ImageSubquery.imageURLs,
+    FacilitiesSubquery.facilities,
+    ReviewSubquery.reviews
+    FROM 
+        Hotels
+    LEFT JOIN 
+        AVGRating ON Hotels.id = AVGRating.hotelID
+    LEFT JOIN (
+        SELECT 
+            HotelID,
+            JSON_ARRAYAGG(ImageURL) AS imageURLs
+        FROM 
+            Images
+        GROUP BY 
+            HotelID
+    ) AS ImageSubquery ON Hotels.id = ImageSubquery.HotelID
+    LEFT JOIN (
+        SELECT 
+            hotelID,
+            GROUP_CONCAT(DISTINCT CONCAT(FacilitiesTable.id, ':', FacilitiesTable.category, ':', FacilitiesTable.name)) AS facilities
+        FROM 
+            HotelFacilities
+        JOIN 
+            FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
+        GROUP BY 
+            hotelID
+    ) AS FacilitiesSubquery ON Hotels.id = FacilitiesSubquery.hotelID
+    LEFT JOIN (
+        SELECT 
+            hotelID,
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'text', text,
+                    'userId', userID
+                )
+            ) AS reviews
+        FROM 
+            UserReview
+        GROUP BY 
+            hotelID
+    ) AS ReviewSubquery ON Hotels.id = ReviewSubquery.hotelID
+    WHERE 
+        Hotels.id = ?
     `;
 
     // Query for available rooms
