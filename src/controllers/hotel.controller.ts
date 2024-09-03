@@ -88,7 +88,13 @@ export const getHotels = async (req: Request, res: Response) => {
       queryParams.push(parseFloat(priceMin as string));
     }
     if (priceMax) {
-      query += " AND rph.price <= ?";
+      let price = parseFloat(priceMax as string);
+      if (price = 250) {
+        query += " AND rph.price <= 9999999999"
+      }
+      else {
+        query += " And rph.price <= ?";
+      }
       queryParams.push(parseFloat(priceMax as string));
     }
     if (freeCancellation === "true") {
