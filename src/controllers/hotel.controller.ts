@@ -44,7 +44,7 @@ export const getHotels = async (req: Request, res: Response) => {
   try {
     let query = `
       SELECT DISTINCT h.id, h.name, h.city, rph.price, r.type, h.reviews, h.latitude, h.longitude, avg.location,
-                      h.freeCancellation, h.prepayment, h.scoreLetter, 
+                      h.freeCancellation, h.prepayment, h.scoreLetter, h.address,
                       h.starsRating, h.meals, h.distance, h.image,
                       ROUND(avg.avgRating, 1) AS avgRating,
                       (
@@ -89,10 +89,9 @@ export const getHotels = async (req: Request, res: Response) => {
     }
     if (priceMax) {
       let price = parseFloat(priceMax as string);
-      if (price = 250) {
-        query += " AND rph.price <= 9999999999"
-      }
-      else {
+      if ((price = 250)) {
+        query += " AND rph.price <= 9999999999";
+      } else {
         query += " And rph.price <= ?";
       }
       queryParams.push(parseFloat(priceMax as string));
@@ -246,7 +245,15 @@ export const getHotelDetailsWithAvailableRooms = async (
             JSON_ARRAYAGG(
                 JSON_OBJECT(
                     'text', text,
-                    'userId', userID
+                    'userId', userID,
+                    'date', date,
+                    'staff', staff,
+                    'facilities', facilities,
+                    'cleanliness', cleanliness,
+                    'freeWifi', freeWifi,
+                    'location', location,
+                    'valueForMoney', valueForMoney,
+                    'comfort', comfort
                 )
             ) AS reviews
         FROM 
