@@ -2,6 +2,9 @@ import { db } from "..";
 import { Request, Response } from "express";
 import mongoose from "mongoose"; // Assuming you're using Mongoose for MongoDB
 import { RowDataPacket, ResultSetHeader } from "mysql2"; // Import types from mysql2
+
+import { sendReservationEmail } from "../services/email.service";
+
 import { format } from "date-fns"; // Import format from date-fns
 
 interface Reservation {
@@ -12,6 +15,7 @@ interface Reservation {
   quantity: number;
   roomPrice: number;
 }
+
 
 export const addNewReservation = async (
   req: Request,
@@ -25,6 +29,7 @@ export const addNewReservation = async (
     startDate,
     endDate,
     roomsForReservation,
+    hotelName,
   } = req.body;
 
   try {
@@ -153,7 +158,15 @@ export const addNewReservation = async (
                     .json({ error: "SQL database error", details: insertErr });
                   return;
                 }
-
+                sendReservationEmail({
+                  hotelID,
+                  roomID,
+                  email,
+                  startDate,
+                  endDate,
+                  roomsForReservation,
+                  hotelName,
+                });
                 // Send final response with hotel name, reservation ID, and email
                 res.status(201).json({
                   message: "Reservation added successfully",
