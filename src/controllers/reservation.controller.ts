@@ -1,8 +1,17 @@
-import { log } from "console";
 import { db } from "..";
 import { Request, Response } from "express";
 import mongoose from "mongoose"; // Assuming you're using Mongoose for MongoDB
 import { RowDataPacket, ResultSetHeader } from "mysql2"; // Import types from mysql2
+import { format } from "date-fns"; // Import format from date-fns
+
+interface Reservation {
+  id: number;
+  hotelName: string;
+  startDate: string;
+  endDate: string;
+  quantity: number;
+  roomPrice: number;
+}
 
 export const addNewReservation = async (
   req: Request,
@@ -162,36 +171,118 @@ export const addNewReservation = async (
     res.status(500).json({ error: "MongoDB error", details: mongoErr });
   }
 };
+
 export const getReservationPerUserid = (req: Request, res: Response) => {
   const userId = req.params.userId;
+
+  // SQL query to join Reservations, Hotels, and RoomsPerHotel tables
   const sql = `
-    SELECT * FROM Reservations WHERE userID = ?
+    SELECT 
+      Reservations.id, 
+      Reservations.startDate, 
+      Reservations.endDate, 
+      Reservations.quantity,
+      Hotels.id AS hotelId,   -- Add hotelId
+      Hotels.name AS hotelName, 
+      Hotels.city AS city,
+      Hotels.image AS image,
+      RoomsPerHotel.price AS roomPrice
+    FROM 
+      Reservations
+    JOIN 
+      Hotels ON Reservations.HotelID = Hotels.id
+    JOIN 
+      RoomsPerHotel ON Reservations.RoomID = RoomsPerHotel.RoomID 
+    WHERE 
+      Reservations.userID = ? 
+      AND RoomsPerHotel.HotelID = Reservations.HotelID
+    ORDER BY Reservations.startDate DESC;  -- Order by startDate descending
   `;
-  db.query(sql, [userId], (err, result) => {
+
+  // Query the database
+  db.query<RowDataPacket[]>(sql, [userId], (err, result) => {
     if (err) {
       res.status(500).json({ error: "Database error", details: err });
       return;
     }
-    res.status(200).json(result);
+
+    // Now you can safely map through the result
+    const calculatedResult = result.map((row) => {
+      const startDate = new Date(row.startDate);
+      const endDate = new Date(row.endDate);
+      const nights = Math.ceil(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      ); // Calculate number of nights
+
+      // Total price = room price * number of nights * quantity
+      const totalPrice = row.roomPrice * nights * row.quantity;
+
+      // Format the start and end dates
+      const formattedStartDate = format(startDate, "d MMM yyyy");
+      const formattedEndDate = format(endDate, "d MMM yyyy");
+
+      return {
+        ...row, // Spread the original row data
+        totalPrice,
+        nights,
+        dateRange: `${formattedStartDate} – ${formattedEndDate}`, // Format the date range
+      };
+    });
+
+    res.status(200).json(calculatedResult);
   });
 };
 
-export const deleteReservation = (req: Request, res: Response): void => {
+interface AuthenticatedRequest extends Request {
+  userId?: string; // Add userId to the request object
+}
+
+export const deleteReservation = (
+  req: AuthenticatedRequest,
+  res: Response
+): void => {
   const reservationID = req.params.reservationID;
+  const userID = req.userId; // Extract the userID from the request (set by the middleware)
 
-  const deleteSql = `DELETE FROM Reservations WHERE id = ?`;
+  // First, fetch the userID associated with the reservation to ensure ownership
+  const getReservationSql = `SELECT userID FROM Reservations WHERE id = ?`;
 
-  db.query(deleteSql, [reservationID], (err: any, result: any) => {
+  db.query(getReservationSql, [reservationID], (err: any, result: any) => {
     if (err) {
       res.status(500).json({ error: "Database error", details: err });
       return;
     }
 
-    if (result.affectedRows === 0) {
+    if (result.length === 0) {
       res.status(404).json({ error: "Reservation not found" });
       return;
     }
 
-    res.status(200).json({ message: "Reservation deleted successfully" });
+    const reservationOwnerID = result[0].userID;
+
+    // Check if the current user owns the reservation
+    if (reservationOwnerID !== userID) {
+      res.status(403).json({
+        error: "You do not have permission to cancel this reservation",
+      });
+      return;
+    }
+
+    // If the user owns the reservation, proceed to delete it
+    const deleteSql = `DELETE FROM Reservations WHERE id = ?`;
+
+    db.query(deleteSql, [reservationID], (err: any, result: any) => {
+      if (err) {
+        res.status(500).json({ error: "Database error", details: err });
+        return;
+      }
+
+      if (result.affectedRows === 0) {
+        res.status(404).json({ error: "Reservation not found" });
+        return;
+      }
+
+      res.status(200).json({ message: "Reservation deleted successfully" });
+    });
   });
 };

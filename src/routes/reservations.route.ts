@@ -7,11 +7,8 @@ import {
 
 const reservationRoutes = express.Router();
 
-reservationRoutes.get("/reservation/:userId", getReservationPerUserid);
+reservationRoutes.get("/:userId", getReservationPerUserid);
 reservationRoutes.post("/reservation", addNewReservation);
-reservationRoutes.delete(
-  "/reservation/cancel/:reservationID",
-  deleteReservation
-);
+reservationRoutes.delete("/cancel/:reservationID", deleteReservation);
 
 export default reservationRoutes;
