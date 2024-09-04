@@ -10,6 +10,7 @@ import hotelRoutes from "./routes/hotels.routes";
 import reservationRoutes from "./routes/reservations.route";
 import { verifyToken } from "./middleware/auth.middleware";
 import reviewRoutes from "./routes/reviews.routes";
+import paymentRoutes from "./routes/payment.routes";
 
 dotenv.config();
 
@@ -65,8 +66,9 @@ async function main() {
   app.use("/api/auth", authRoute);
   app.use("/api/users", usersRoute);
   app.use("/api/hotels", hotelRoutes);
-  app.use("/api/reservations", verifyToken, reservationRoutes)
-  app.use("/api/reviews", verifyToken , reviewRoutes) 
+  app.use("/api/reservations", verifyToken, reservationRoutes);
+  app.use("/api/reviews", verifyToken, reviewRoutes);
+  app.use("/api/paypal", paymentRoutes);
 
   // Centralized Error Handling Middleware
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {

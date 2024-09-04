@@ -10,8 +10,8 @@ hotelRoutes.get("/test", (req, res) => {
   res.json({ message: "Test route working" });
 });
 
-hotelRoutes.get("/", getHotels);
 hotelRoutes.get("/:id", getHotelDetailsWithAvailableRooms);
+hotelRoutes.get("/", getHotels);
 // router.put("/availability", updateRoomAvailability); // Updating room availability
 
 export default hotelRoutes;
