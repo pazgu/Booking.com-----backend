@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "..";
-import { QueryError, RowDataPacket, FieldPacket } from "mysql2";
+import { RowDataPacket } from "mysql2";
+import User from "../models/user.model";
 
 // Utility function to calculate the number of nights between two dates
 const calculateNumberOfNights = (startDate: Date, endDate: Date): number => {
@@ -253,7 +254,8 @@ export const getHotelDetailsWithAvailableRooms = async (
                     'freeWifi', freeWifi,
                     'location', location,
                     'valueForMoney', valueForMoney,
-                    'comfort', comfort
+                    'comfort', comfort,
+                    'username', username
                 )
             ) AS reviews
         FROM 
@@ -264,7 +266,6 @@ export const getHotelDetailsWithAvailableRooms = async (
     WHERE 
         Hotels.id = ?
     `;
-
     // Query for available rooms
     const roomsQuery = `
       SELECT r.id, r.type, r.description, r.capacity, rph.price,

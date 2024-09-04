@@ -15,12 +15,13 @@ export const addReview = (req: Request, res: Response) => {
     text,
     userID,
     date,
+    username,
   } = req.body;
 
   // Insert the new review
   const insertQuery = `
-        INSERT INTO UserReview (hotelID, staff, facilities, cleanliness, freeWifi, location, valueForMoney, comfort, text, userID, date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO UserReview (hotelID, staff, facilities, cleanliness, freeWifi, location, valueForMoney, comfort, text, userID, date, username)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?)
     `;
 
   db.query(
@@ -37,6 +38,7 @@ export const addReview = (req: Request, res: Response) => {
       text,
       userID,
       date,
+      username,
     ],
     (err, result: ResultSetHeader) => {
       if (err) {
