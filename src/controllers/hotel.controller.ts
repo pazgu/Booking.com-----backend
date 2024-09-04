@@ -45,6 +45,7 @@ export const getHotels = async (req: Request, res: Response) => {
   try {
     let query = `
       SELECT DISTINCT h.id, h.name, h.city, rph.price, r.type, h.reviews, h.latitude, h.longitude, avg.location,
+
                       h.freeCancellation, h.prepayment, h.scoreLetter, h.address,
                       h.starsRating, h.meals, h.distance, h.image,
                       ROUND(avg.avgRating, 1) AS avgRating,
@@ -246,6 +247,7 @@ export const getHotelDetailsWithAvailableRooms = async (
             JSON_ARRAYAGG(
                 JSON_OBJECT(
                     'text', text,
+
                     'userId', userID,
                     'date', date,
                     'staff', staff,

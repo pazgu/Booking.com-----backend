@@ -1,83 +1,140 @@
+import { log } from "console";
 import { db } from "..";
-import { ResultSetHeader } from "mysql2";
 import { Request, Response } from "express";
-import { RowDataPacket } from "mysql2";
+import mongoose from "mongoose"; // Assuming you're using Mongoose for MongoDB
+import { RowDataPacket, ResultSetHeader } from "mysql2"; // Import types from mysql2
 
-export const addNewReservation = (req: Request, res: Response): void => {
-  const { userID, hotelID, roomID, startDate, endDate, roomsForReservation } =
-    req.body;
-
-  // First query: Check how many rooms are available considering the date range
-  const getAvailableRoomsSql = `
-    SELECT 
-      SUM(quantity) AS reservedRooms
-    FROM Reservations
-    WHERE HotelID = ?
-      AND RoomID = ?
-      AND (
-        (startDate <= ? AND endDate >= ?) OR
-        (startDate <= ? AND endDate >= ?) OR
-        (startDate >= ? AND endDate <= ?)
-      )
-  `;
-
-  const values = [
+export const addNewReservation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const {
+    userID,
+    email,
     hotelID,
     roomID,
-    endDate, // Checking if the reservation ends during an existing reservation
-    startDate, // Checking if the reservation starts during an existing reservation
-    endDate, // Checking if the reservation ends during an existing reservation
-    startDate, // Checking if the reservation starts during an existing reservation
-    startDate, // Checking if the existing reservation starts within the requested range
-    endDate, // Checking if the existing reservation ends within the requested range
-  ];
+    startDate,
+    endDate,
+    roomsForReservation,
+  } = req.body;
 
-  db.query<RowDataPacket[]>(getAvailableRoomsSql, values, (err, results) => {
-    if (err) {
-      res.status(500).json({ error: "Database error", details: err });
+  try {
+    // Ensure the MongoDB connection is ready
+    if (!mongoose.connection.readyState) {
+      throw new Error("MongoDB is not connected");
+    }
+
+    const dbConnection = mongoose.connection.db;
+    if (!dbConnection) {
+      throw new Error("MongoDB connection is undefined");
+    }
+
+    // Convert the userID to ObjectId before querying MongoDB
+    let objectId;
+    try {
+      objectId = new mongoose.Types.ObjectId(userID);
+    } catch (error) {
+      console.error("Invalid ObjectId format:", error);
+      res.status(400).json({ error: "Invalid userID format" });
       return;
     }
 
-    const reservedRooms = results[0]?.reservedRooms || 0;
-    const totalAvailableRooms = 10; // Assuming 10 rooms are initially available per room type
-    let availableRooms = totalAvailableRooms - reservedRooms;
+    // Query MongoDB for the user by ObjectId only
+    const usersCollection = dbConnection.collection("users");
+    const user = await usersCollection.findOne({ _id: objectId });
 
-    if (availableRooms < 0) {
-      availableRooms = 0; // Prevent negative available rooms.
-    }
-
-    if (availableRooms < roomsForReservation) {
-      res.status(400).json({
-        error: `Sorry, we are unable to complete your reservation as only ${availableRooms} room(s) are available for your selected dates. Please try adjusting your dates or reduce the number of rooms.`,
-      });
+    if (!user) {
+      res.status(400).json({ error: "User not found" });
       return;
     }
 
-    // Proceed to insert the reservation if there are enough rooms available
-    const insertSql = `
-      INSERT INTO Reservations (userID, HotelID, RoomID, startDate, endDate, quantity)
-      VALUES (?, ?, ?, ?, ?, ?);
+    if (user.email !== email) {
+      res.status(400).json({ error: "User ID and email do not match" });
+      return;
+    }
+
+    // 2. Query SQL for available rooms
+    const getAvailableRoomsSql = `
+      SELECT 
+        SUM(quantity) AS reservedRooms
+      FROM Reservations
+      WHERE HotelID = ?
+        AND RoomID = ?
+        AND (
+          (startDate <= ? AND endDate >= ?) OR
+          (startDate <= ? AND endDate >= ?) OR
+          (startDate >= ? AND endDate <= ?)
+        )
     `;
-    const insertValues = [
-      userID,
+
+    const values = [
       hotelID,
       roomID,
+      endDate,
       startDate,
       endDate,
-      roomsForReservation,
+      startDate,
+      startDate,
+      endDate,
     ];
 
-    db.query<ResultSetHeader>(insertSql, insertValues, (insertErr, result) => {
-      if (insertErr) {
-        res.status(500).json({ error: "Database error", details: insertErr });
+    db.query<RowDataPacket[]>(getAvailableRoomsSql, values, (err, results) => {
+      if (err) {
+        res.status(500).json({ error: "SQL database error", details: err });
         return;
       }
-      res.status(201).json({
-        message: "Reservation added successfully",
-        reservationID: result.insertId,
-      });
+
+      const reservedRooms = results[0]?.reservedRooms || 0;
+      const totalAvailableRooms = 10; // Assuming 10 rooms are initially available per room type
+      let availableRooms = totalAvailableRooms - reservedRooms;
+
+      if (availableRooms < 0) {
+        availableRooms = 0; // Prevent negative available rooms.
+      }
+
+      if (availableRooms < roomsForReservation) {
+        res.status(400).json({
+          error: `Sorry, we are unable to complete your reservation as only ${availableRooms} room(s) are available for your selected dates. Please try adjusting your dates or reduce the number of rooms.`,
+        });
+        return;
+      }
+
+      // 3. Proceed to insert the reservation into SQL if there are enough rooms available
+      const insertSql = `
+        INSERT INTO Reservations (userID, HotelID, RoomID, startDate, endDate, quantity)
+        VALUES (?, ?, ?, ?, ?, ?);
+      `;
+      const insertValues = [
+        userID,
+        hotelID,
+        roomID,
+        startDate,
+        endDate,
+        roomsForReservation,
+      ];
+
+      db.query<ResultSetHeader>(
+        insertSql,
+        insertValues,
+        (insertErr, result) => {
+          if (insertErr) {
+            res
+              .status(500)
+              .json({ error: "SQL database error", details: insertErr });
+            return;
+          }
+
+          res.status(201).json({
+            message: "Reservation added successfully",
+            reservationID: result.insertId, // Accessing insertId from ResultSetHeader
+            email: user.email, // Return the email in the response
+          });
+        }
+      );
     });
-  });
+  } catch (mongoErr) {
+    res.status(500).json({ error: "MongoDB error", details: mongoErr });
+  }
 };
 
 export const getReservationPerUserid = (req: Request, res: Response) => {
