@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "..";
-import { QueryError, RowDataPacket, FieldPacket } from "mysql2";
+import { RowDataPacket } from "mysql2";
+import User from "../models/user.model";
 
 // Utility function to calculate the number of nights between two dates
 const calculateNumberOfNights = (startDate: Date, endDate: Date): number => {
@@ -44,7 +45,8 @@ export const getHotels = async (req: Request, res: Response) => {
   try {
     let query = `
       SELECT DISTINCT h.id, h.name, h.city, rph.price, r.type, h.reviews, h.latitude, h.longitude, avg.location,
-                      h.freeCancellation, h.prepayment, h.scoreLetter, 
+
+                      h.freeCancellation, h.prepayment, h.scoreLetter, h.address,
                       h.starsRating, h.meals, h.distance, h.image,
                       ROUND(avg.avgRating, 1) AS avgRating,
                       (
@@ -88,7 +90,12 @@ export const getHotels = async (req: Request, res: Response) => {
       queryParams.push(parseFloat(priceMin as string));
     }
     if (priceMax) {
-      query += " AND rph.price <= ?";
+      let price = parseFloat(priceMax as string);
+      if ((price = 250)) {
+        query += " AND rph.price <= 9999999999";
+      } else {
+        query += " And rph.price <= ?";
+      }
       queryParams.push(parseFloat(priceMax as string));
     }
     if (freeCancellation === "true") {
@@ -240,7 +247,17 @@ export const getHotelDetailsWithAvailableRooms = async (
             JSON_ARRAYAGG(
                 JSON_OBJECT(
                     'text', text,
-                    'userId', userID
+
+                    'userId', userID,
+                    'date', date,
+                    'staff', staff,
+                    'facilities', facilities,
+                    'cleanliness', cleanliness,
+                    'freeWifi', freeWifi,
+                    'location', location,
+                    'valueForMoney', valueForMoney,
+                    'comfort', comfort,
+                    'username', username
                 )
             ) AS reviews
         FROM 
@@ -251,7 +268,6 @@ export const getHotelDetailsWithAvailableRooms = async (
     WHERE 
         Hotels.id = ?
     `;
-
     // Query for available rooms
     const roomsQuery = `
       SELECT r.id, r.type, r.description, r.capacity, rph.price,
