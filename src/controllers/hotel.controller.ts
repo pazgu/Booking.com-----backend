@@ -37,7 +37,6 @@ export const getHotels = async (req: Request, res: Response) => {
     scoreLetter,
     sortBy,
     sortOrder = "ASC",
-    limit = 30,
     offset = 0,
   } = req.query;
 
@@ -168,9 +167,6 @@ export const getHotels = async (req: Request, res: Response) => {
       .query<RowDataPacket[]>(countQuery, queryParams);
     const totalCount = countRows[0].totalCount;
 
-    // Pagination
-    query += " LIMIT ? OFFSET ?";
-    queryParams.push(parseInt(limit as string), parseInt(offset as string));
 
     const [rows] = await db
       .promise()
