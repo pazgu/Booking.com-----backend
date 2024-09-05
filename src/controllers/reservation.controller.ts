@@ -158,6 +158,8 @@ export const addNewReservation = async (
                     .json({ error: "SQL database error", details: insertErr });
                   return;
                 }
+                const reservationID = result.insertId;
+
                 sendReservationEmail({
                   hotelID,
                   roomID,
@@ -166,6 +168,7 @@ export const addNewReservation = async (
                   endDate,
                   roomsForReservation,
                   hotelName,
+                  reservationID,
                 });
                 // Send final response with hotel name, reservation ID, and email
                 res.status(201).json({
