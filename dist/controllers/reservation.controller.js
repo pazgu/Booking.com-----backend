@@ -3,11 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteReservation = exports.getReservationPerUserid = exports.addNewReservation = void 0;
+exports.checkReservation = exports.checkReservationStatus = exports.deleteReservation = exports.getReservationPerUserid = exports.addNewReservation = void 0;
 const __1 = require("..");
 const mongoose_1 = __importDefault(require("mongoose")); // Assuming you're using Mongoose for MongoDB
+const date_fns_1 = require("date-fns");
 const email_service_1 = require("../services/email.service");
-const date_fns_1 = require("date-fns"); // Import format from date-fns
+const date_fns_2 = require("date-fns"); // Import format from date-fns
 const addNewReservation = async (req, res) => {
     const { userID, email, hotelID, roomID, startDate, endDate, roomsForReservation, hotelName, } = req.body;
     try {
@@ -113,6 +114,7 @@ const addNewReservation = async (req, res) => {
                             .json({ error: "SQL database error", details: insertErr });
                         return;
                     }
+                    const reservationID = result.insertId;
                     (0, email_service_1.sendReservationEmail)({
                         hotelID,
                         roomID,
@@ -121,6 +123,7 @@ const addNewReservation = async (req, res) => {
                         endDate,
                         roomsForReservation,
                         hotelName,
+                        reservationID,
                     });
                     // Send final response with hotel name, reservation ID, and email
                     res.status(201).json({
@@ -177,8 +180,8 @@ const getReservationPerUserid = (req, res) => {
             // Total price = room price * number of nights * quantity
             const totalPrice = row.roomPrice * nights * row.quantity;
             // Format the start and end dates
-            const formattedStartDate = (0, date_fns_1.format)(startDate, "d MMM yyyy");
-            const formattedEndDate = (0, date_fns_1.format)(endDate, "d MMM yyyy");
+            const formattedStartDate = (0, date_fns_2.format)(startDate, "d MMM yyyy");
+            const formattedEndDate = (0, date_fns_2.format)(endDate, "d MMM yyyy");
             return {
                 ...row, // Spread the original row data
                 totalPrice,
@@ -228,3 +231,66 @@ const deleteReservation = (req, res) => {
     });
 };
 exports.deleteReservation = deleteReservation;
+const checkReservationStatus = async (userID, reservationID) => {
+    try {
+        // Ensure MongoDB connection is ready
+        if (!mongoose_1.default.connection.readyState) {
+            throw new Error("MongoDB is not connected");
+        }
+        const dbConnection = mongoose_1.default.connection.db;
+        if (!dbConnection) {
+            throw new Error("MongoDB connection is undefined");
+        }
+        // Convert the userID to ObjectId before querying MongoDB
+        let objectId;
+        try {
+            objectId = new mongoose_1.default.Types.ObjectId(userID);
+        }
+        catch (error) {
+            console.error("Invalid ObjectId format:", error);
+            return false; // Return false if userID format is invalid
+        }
+        // 1. Check if the reservation exists and belongs to the user
+        const checkReservationSql = `
+      SELECT userID, startDate, endDate 
+      FROM Reservations 
+      WHERE id = ?
+    `;
+        const reservationResult = await new Promise((resolve, reject) => {
+            __1.db.query(checkReservationSql, [reservationID], (err, result) => {
+                if (err)
+                    return reject(err);
+                resolve(result);
+            });
+        });
+        if (reservationResult.length === 0) {
+            return false; // Return false if the reservation doesn't exist
+        }
+        const reservation = reservationResult[0];
+        // 2. Check if the reservation belongs to the given userID
+        if (reservation.userID !== userID) {
+            return false; // Return false if the reservation does not belong to this user
+        }
+        // 3. Check if the reservation has already happened by its dates
+        const currentDate = new Date();
+        const endDate = new Date(reservation.endDate); // Parse the end date
+        // Return true if the reservation has already happened (endDate is before currentDate)
+        return (0, date_fns_1.isBefore)(endDate, currentDate);
+    }
+    catch (error) {
+        console.error("Error checking reservation status:", error);
+        return false; // Return false in case of any error
+    }
+};
+exports.checkReservationStatus = checkReservationStatus;
+const checkReservation = async (req, res) => {
+    const { userID, reservationID } = req.body; // Get userID and reservationID from the request body
+    const hasReservationHappened = await (0, exports.checkReservationStatus)(userID, reservationID);
+    if (hasReservationHappened) {
+        res.status(200).json({ success: true });
+    }
+    else {
+        res.status(400).json({ success: false });
+    }
+};
+exports.checkReservation = checkReservation;
