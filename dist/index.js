@@ -16,9 +16,15 @@ const reservations_route_1 = __importDefault(require("./routes/reservations.rout
 const auth_middleware_1 = require("./middleware/auth.middleware");
 const reviews_routes_1 = __importDefault(require("./routes/reviews.routes"));
 const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
+const fs_1 = __importDefault(require("fs"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
+const caCertPath = process.env.CA_CERTIFICATE_PATH;
+if (!caCertPath) {
+    throw new Error("CA_CERTIFICATE_PATH is not defined in the environment variables");
+}
+const caCert = fs_1.default.readFileSync(caCertPath);
 exports.db = (0, mysql2_1.createConnection)({
     host: process.env.AIVAN_HOST,
     user: process.env.AIVAN_USERNAME,
@@ -27,8 +33,8 @@ exports.db = (0, mysql2_1.createConnection)({
     connectTimeout: 30000,
     port: parseInt(process.env.SQLPORT || "20285"),
     ssl: {
+        ca: caCert,
         rejectUnauthorized: true,
-        ca: process.env.CA_Certificate,
     },
 });
 async function main() {

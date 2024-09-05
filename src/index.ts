@@ -11,11 +11,22 @@ import reservationRoutes from "./routes/reservations.route";
 import { verifyToken } from "./middleware/auth.middleware";
 import reviewRoutes from "./routes/reviews.routes";
 import paymentRoutes from "./routes/payment.routes";
+import fs from "fs";
 
 dotenv.config();
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
+
+const caCertPath = process.env.CA_CERTIFICATE_PATH;
+
+if (!caCertPath) {
+  throw new Error(
+    "CA_CERTIFICATE_PATH is not defined in the environment variables"
+  );
+}
+
+const caCert = fs.readFileSync(caCertPath);
 
 export const db = createConnection({
   host: process.env.AIVAN_HOST,
@@ -25,8 +36,8 @@ export const db = createConnection({
   connectTimeout: 30000,
   port: parseInt(process.env.SQLPORT || "20285"),
   ssl: {
-    rejectUnauthorized: false,
-    ca: process.env.CA_Certificate,
+    ca: caCert,
+    rejectUnauthorized: true,
   },
 });
 
