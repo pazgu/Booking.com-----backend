@@ -25,7 +25,7 @@ export const db = createConnection({
   connectTimeout: 30000,
   port: parseInt(process.env.SQLPORT || "20285"),
   ssl: {
-    rejectUnauthorized: true,
+    rejectUnauthorized: false,
     ca: process.env.CA_Certificate,
   },
 });
