@@ -21,6 +21,7 @@ const sendReservationEmail = async (reservationDetails) => {
       <h1>Reservation Confirmation</h1>
       <p>Thank you for your reservation. Here are your details:</p>
       <ul>
+        <li><strong>Reservation number:</strong> ${reservationDetails.reservationID}</li>
         <li><strong>Hotel:</strong> ${reservationDetails.hotelName}</li>
         <li><strong>Start Date:</strong> ${reservationDetails.startDate}</li>
         <li><strong>End Date:</strong> ${reservationDetails.endDate}</li>

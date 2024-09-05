@@ -9,4 +9,5 @@ const reservationRoutes = express_1.default.Router();
 reservationRoutes.get("/:userId", reservation_controller_1.getReservationPerUserid);
 reservationRoutes.post("/reservation", reservation_controller_1.addNewReservation);
 reservationRoutes.delete("/cancel/:reservationID", reservation_controller_1.deleteReservation);
+reservationRoutes.post("/checkReservation", reservation_controller_1.checkReservation);
 exports.default = reservationRoutes;
