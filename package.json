@@ -8,8 +8,7 @@
     "build": "tsc",
     "dev": "nodemon --exec ts-node src/index.ts",
     "seed": "ts-node src/seed.ts",
-    "seed:reviews": "ts-node src/seed.reviews.ts",
-    "postinstall": "npm install --omit=dev && npm run build"
+    "seed:reviews": "ts-node src/seed.reviews.ts"
   },
   "keywords": [],
   "author": "",
