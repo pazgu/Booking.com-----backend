@@ -15,11 +15,12 @@ const parseDate = (dateString) => {
 };
 // Get hotels with filtering and pagination, returning only standard rooms
 const getHotels = async (req, res) => {
-    const { numOfPeople, numOfRooms, startDate, endDate, name, city, priceMin, priceMax, freeCancellation, prepayment, distanceMax, meals, starsRating, facilities, scoreLetter, sortBy, sortOrder = "ASC", limit = 30, offset = 0, } = req.query;
+    const { numOfPeople, numOfRooms, startDate, endDate, name, city, priceMin, priceMax, freeCancellation, prepayment, distanceMax, meals, starsRating, facilities, scoreLetter, sortBy, sortOrder = "ASC", offset = 0, } = req.query;
     try {
         let query = `
       SELECT DISTINCT h.id, h.name, h.city, rph.price, r.type, h.reviews, h.latitude, h.longitude, avg.location,
-                      h.freeCancellation, h.prepayment, h.scoreLetter, 
+
+                      h.freeCancellation, h.prepayment, h.scoreLetter, h.address,
                       h.starsRating, h.meals, h.distance, h.image,
                       ROUND(avg.avgRating, 1) AS avgRating,
                       (
@@ -59,7 +60,13 @@ const getHotels = async (req, res) => {
             queryParams.push(parseFloat(priceMin));
         }
         if (priceMax) {
-            query += " AND rph.price <= ?";
+            let price = parseFloat(priceMax);
+            if ((price = 250)) {
+                query += " AND rph.price <= 9999999999";
+            }
+            else {
+                query += " And rph.price <= ?";
+            }
             queryParams.push(parseFloat(priceMax));
         }
         if (freeCancellation === "true") {
@@ -131,9 +138,6 @@ const getHotels = async (req, res) => {
             .promise()
             .query(countQuery, queryParams);
         const totalCount = countRows[0].totalCount;
-        // Pagination
-        query += " LIMIT ? OFFSET ?";
-        queryParams.push(parseInt(limit), parseInt(offset));
         const [rows] = await __1.db
             .promise()
             .query(query, queryParams);
@@ -162,24 +166,61 @@ const getHotelDetailsWithAvailableRooms = async (req, res) => {
         // Query for hotel details
         const hotelQuery = `
     SELECT 
-        Hotels.*, 
-        AVGRating.*,
-        JSON_ARRAYAGG(Images.ImageURL) AS imageURLs,
-        GROUP_CONCAT(DISTINCT CONCAT(FacilitiesTable.id, ':', FacilitiesTable.category, ':', FacilitiesTable.name)) AS facilities,
-        JSON_ARRAYAGG(
-          JSON_OBJECT(
-            'text', UserReview.text,
-            'userId', UserReview.userID
-          )
-        ) AS reviews
-    FROM Hotels 
-    LEFT JOIN AVGRating ON Hotels.id = AVGRating.hotelID
-    LEFT JOIN HotelFacilities ON Hotels.id = HotelFacilities.hotelID
-    LEFT JOIN FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
-    LEFT JOIN UserReview ON Hotels.id = UserReview.hotelID
-    LEFT JOIN Images ON Hotels.id = Images.HotelID
-    WHERE Hotels.id = ?
-    GROUP BY Hotels.id
+    Hotels.*,
+    AVGRating.*,
+    ImageSubquery.imageURLs,
+    FacilitiesSubquery.facilities,
+    ReviewSubquery.reviews
+    FROM 
+        Hotels
+    LEFT JOIN 
+        AVGRating ON Hotels.id = AVGRating.hotelID
+    LEFT JOIN (
+        SELECT 
+            HotelID,
+            JSON_ARRAYAGG(ImageURL) AS imageURLs
+        FROM 
+            Images
+        GROUP BY 
+            HotelID
+    ) AS ImageSubquery ON Hotels.id = ImageSubquery.HotelID
+    LEFT JOIN (
+        SELECT 
+            hotelID,
+            GROUP_CONCAT(DISTINCT CONCAT(FacilitiesTable.id, ':', FacilitiesTable.category, ':', FacilitiesTable.name)) AS facilities
+        FROM 
+            HotelFacilities
+        JOIN 
+            FacilitiesTable ON HotelFacilities.facilityID = FacilitiesTable.id
+        GROUP BY 
+            hotelID
+    ) AS FacilitiesSubquery ON Hotels.id = FacilitiesSubquery.hotelID
+    LEFT JOIN (
+        SELECT 
+            hotelID,
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'text', text,
+
+                    'userId', userID,
+                    'date', date,
+                    'staff', staff,
+                    'facilities', facilities,
+                    'cleanliness', cleanliness,
+                    'freeWifi', freeWifi,
+                    'location', location,
+                    'valueForMoney', valueForMoney,
+                    'comfort', comfort,
+                    'username', username
+                )
+            ) AS reviews
+        FROM 
+            UserReview
+        GROUP BY 
+            hotelID
+    ) AS ReviewSubquery ON Hotels.id = ReviewSubquery.hotelID
+    WHERE 
+        Hotels.id = ?
     `;
         // Query for available rooms
         const roomsQuery = `
