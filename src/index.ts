@@ -70,7 +70,12 @@ async function main() {
   });
 
   // Middlewares
-  app.use(cors());
+  const allowedOrigins = ["bookingcom-frontend-production.up.railway.app"];
+  app.use(
+    cors({
+      origin: allowedOrigins,
+    })
+  );
   app.use(express.json());
 
   // Routes
