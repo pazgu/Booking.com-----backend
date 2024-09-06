@@ -74,6 +74,7 @@ async function main() {
   app.use(
     cors({
       origin: allowedOrigins,
+      credentials: true,
     })
   );
   app.use(express.json());
