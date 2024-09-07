@@ -70,17 +70,27 @@ async function main() {
   });
 
   // Middlewares
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://bookingcom-frontend-production.up.railway.app",
+  ];
+
   app.use(
     cors({
-      origin: [
-        "http://localhost:5173",
-        "https://bookingcom-frontend-production.up.railway.app/api",
-      ],
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-      credentials: true, // Make sure to allow credentials
+      origin: (origin, callback) => {
+        if (allowedOrigins.includes(origin || "")) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
+      credentials: true, // Allows cookies or authentication tokens to be included
+      preflightContinue: true, // Ensures preflight requests are responded to
     })
   );
+
+  // Handle preflight requests for all routes
+  app.options("*", cors());
 
   app.use(express.json());
 
@@ -91,6 +101,17 @@ async function main() {
   app.use("/api/reservations", verifyToken, reservationRoutes);
   app.use("/api/reviews", verifyToken, reviewRoutes);
   app.use("/api/paypal", paymentRoutes);
+
+  // Set CORS headers for all responses
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "");
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
+    next();
+  });
 
   // Centralized Error Handling Middleware
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
