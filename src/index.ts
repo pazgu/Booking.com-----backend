@@ -71,7 +71,7 @@ async function main() {
 
   // Middlewares
   const allowedOrigins = [
-    "bookingcom-frontend-production.up.railway.app",
+    "https://bookingcom-frontend-production.up.railway.app",
     "http://localhost:5173",
   ];
   app.use(
