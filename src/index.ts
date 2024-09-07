@@ -70,16 +70,13 @@ async function main() {
   });
 
   // Middlewares
-  const allowedOrigins = [
-    "bookingcom-frontend-production.up.railway.app",
-    "http://localhost:5173",
-  ];
+  // const allowedOrigins = [
+  //   "bookingcom-frontend-production.up.railway.app",
+  //   "http://localhost:5173",
+  // ];
   app.use(
     cors({
-      origin: allowedOrigins,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow all necessary HTTP methods
-      allowedHeaders: ["Content-Type", "Authorization"], // Allow necessary headers
-      credentials: true, // If you're using cookies or authentication
+      origin: "*",
     })
   );
   app.use(express.json());
