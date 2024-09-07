@@ -44,13 +44,13 @@ export const db = createConnection({
 
 const corsOptions = {
   origin: [
-    'http://localhost:5173',
-    'https://bookingcom-frontend-production.up.railway.app',
-    'http://bookingcom-frontend-production.up.railway.app'
+    "http://localhost:5173",
+    "https://bookingcom-frontend-production.up.railway.app",
+    "http://bookingcom-frontend-production.up.railway.app",
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 async function main() {
@@ -65,7 +65,7 @@ async function main() {
   // Middlewares
   app.use(express.json());
   app.use(cors(corsOptions));
-  app.options('*', cors(corsOptions)); // Enable pre-flight requests for all routes
+  app.options("*", cors(corsOptions)); // Enable pre-flight requests for all routes
 
   // Routes
   app.use("/api/auth", authRoute);
@@ -87,7 +87,7 @@ async function main() {
   });
 
   app.listen(PORT, () => {
-    console.log(Server is running on port ${PORT});
+    console.log(`Server is running on port ${PORT}`);
   });
 
   // Connect to MongoDB
