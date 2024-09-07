@@ -74,10 +74,11 @@ async function main() {
     cors({
       origin: [
         "http://localhost:5173",
-        "https://bookingcom-frontend-production.up.railway.app",
+        "https://bookingcom-frontend-production.up.railway.app/api",
       ],
-      credentials: true,
-      preflightContinue: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true, // Make sure to allow credentials
     })
   );
 
