@@ -42,17 +42,6 @@ export const db = createConnection({
   },
 });
 
-const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "https://bookingcom-frontend-production.up.railway.app",
-    "http://bookingcom-frontend-production.up.railway.app",
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-
 async function main() {
   db.connect((err) => {
     if (err) {
@@ -62,7 +51,37 @@ async function main() {
     }
   });
 
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+
+  // Connect to MongoDB
+  const connect = async () => {
+    try {
+      await mongoose.connect(process.env.MONGO_URI as string);
+      console.log("Connected to MongoDB.");
+    } catch (error) {
+      console.error("Failed to connect to MongoDB:", error);
+      throw error;
+    }
+  };
+
+  mongoose.connection.on("disconnected", () => {
+    console.log("MongoDB disconnected!");
+  });
+
   // Middlewares
+  const corsOptions = {
+    origin: [
+      "http://localhost:5173",
+      "https://bookingcom-frontend-production.up.railway.app",
+      "http://bookingcom-frontend-production.up.railway.app",
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  };
+
   app.use(express.json());
   app.use(cors(corsOptions));
   app.options("*", cors(corsOptions)); // Enable pre-flight requests for all routes
@@ -84,25 +103,6 @@ async function main() {
       status,
       message,
     });
-  });
-
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
-
-  // Connect to MongoDB
-  const connect = async () => {
-    try {
-      await mongoose.connect(process.env.MONGO_URI as string);
-      console.log("Connected to MongoDB.");
-    } catch (error) {
-      console.error("Failed to connect to MongoDB:", error);
-      throw error;
-    }
-  };
-
-  mongoose.connection.on("disconnected", () => {
-    console.log("MongoDB disconnected!");
   });
 
   connect();
