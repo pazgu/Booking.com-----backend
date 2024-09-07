@@ -64,7 +64,11 @@ async function main() {
         console.log("MongoDB disconnected!");
     });
     // Middlewares
-    app.use((0, cors_1.default)());
+    const allowedOrigins = ["bookingcom-frontend-production.up.railway.app"];
+    app.use((0, cors_1.default)({
+        origin: allowedOrigins,
+        credentials: true,
+    }));
     app.use(express_1.default.json());
     // Routes
     app.use("/api/auth", auth_routes_1.default);
