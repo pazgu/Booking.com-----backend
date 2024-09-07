@@ -76,7 +76,7 @@ async function main() {
   // ];
   app.use(
     cors({
-      origin: "*",
+      origin: "bookingcom-frontend-production.up.railway.app",
     })
   );
   app.use(express.json());
