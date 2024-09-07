@@ -12,6 +12,7 @@ import { verifyToken } from "./middleware/auth.middleware";
 import reviewRoutes from "./routes/reviews.routes";
 import paymentRoutes from "./routes/payment.routes";
 import fs from "fs";
+import { all } from "axios";
 
 dotenv.config();
 
@@ -41,6 +42,17 @@ export const db = createConnection({
   },
 });
 
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'https://bookingcom-frontend-production.up.railway.app',
+    'http://bookingcom-frontend-production.up.railway.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 async function main() {
   db.connect((err) => {
     if (err) {
@@ -50,8 +62,32 @@ async function main() {
     }
   });
 
+  // Middlewares
+  app.use(express.json());
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions)); // Enable pre-flight requests for all routes
+
+  // Routes
+  app.use("/api/auth", authRoute);
+  app.use("/api/users", usersRoute);
+  app.use("/api/hotels", hotelRoutes);
+  app.use("/api/reservations", verifyToken, reservationRoutes);
+  app.use("/api/reviews", verifyToken, reviewRoutes);
+  app.use("/api/paypal", paymentRoutes);
+
+  // Centralized Error Handling Middleware
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    const status = err.status || 500;
+    const message = err.message || "Something went wrong";
+    res.status(status).json({
+      success: false,
+      status,
+      message,
+    });
+  });
+
   app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(Server is running on port ${PORT});
   });
 
   // Connect to MongoDB
@@ -67,61 +103,6 @@ async function main() {
 
   mongoose.connection.on("disconnected", () => {
     console.log("MongoDB disconnected!");
-  });
-
-  // Middlewares
-  const allowedOrigins = [
-    "http://localhost:5173",
-    "https://bookingcom-frontend-production.up.railway.app",
-  ];
-
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (allowedOrigins.includes(origin || "")) {
-          callback(null, true);
-        } else {
-          callback(new Error("Not allowed by CORS"));
-        }
-      },
-      credentials: true, // Allows cookies or authentication tokens to be included
-      preflightContinue: true, // Ensures preflight requests are responded to
-    })
-  );
-
-  // Handle preflight requests for all routes
-  app.options("*", cors());
-
-  app.use(express.json());
-
-  // Routes
-  app.use("/api/auth", authRoute);
-  app.use("/api/users", usersRoute);
-  app.use("/api/hotels", hotelRoutes);
-  app.use("/api/reservations", verifyToken, reservationRoutes);
-  app.use("/api/reviews", verifyToken, reviewRoutes);
-  app.use("/api/paypal", paymentRoutes);
-
-  // Set CORS headers for all responses
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    res.header("Access-Control-Allow-Origin", req.headers.origin || "");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-    );
-    res.header("Access-Control-Allow-Credentials", "true");
-    next();
-  });
-
-  // Centralized Error Handling Middleware
-  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || 500;
-    const message = err.message || "Something went wrong";
-    res.status(status).json({
-      success: false,
-      status,
-      message,
-    });
   });
 
   connect();
