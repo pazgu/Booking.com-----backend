@@ -70,13 +70,14 @@ async function main() {
   });
 
   // Middlewares
-  // const allowedOrigins = [
-  //   "bookingcom-frontend-production.up.railway.app",
-  //   "http://localhost:5173",
-  // ];
+  const allowedOrigins = [
+    "bookingcom-frontend-production.up.railway.app",
+    "http://localhost:5173",
+  ];
   app.use(
     cors({
-      origin: "https://bookingcom-frontend-production.up.railway.app",
+      origin: allowedOrigins,
+      preflightContinue: true,
     })
   );
   app.use(express.json());
