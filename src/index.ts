@@ -77,9 +77,14 @@ async function main() {
   app.use(
     cors({
       origin: allowedOrigins,
-      preflightContinue: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true, // Enable handling of credentials (cookies, authorization headers)
     })
   );
+
+  // Explicitly handle preflight requests for all routes
+  app.options("*", cors());
   app.use(express.json());
 
   // Routes
