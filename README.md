@@ -109,8 +109,8 @@ This project is a backend implementation for a **Booking.com clone**. It provide
 ```
 
 ### Future Improvements
-   Implement advanced search filters (e.g., nearby attractions, room types).
-   Integrate payment gateways for secure online payments.
-   Add real-time availability updates with WebSockets.
+   * Add real-time availability updates with WebSockets.
+   * Implement other booking functionlities such as rent a car and book an attraction.
+
 
 
