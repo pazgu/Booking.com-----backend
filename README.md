@@ -56,12 +56,12 @@ This project is a backend implementation for a **Booking.com clone**. It provide
   * Run the seed scripts to populate sample data:
     ```bash
     npm run seed
-```
+   ```
 
 5. Start the development server:
     ```bash
     npm run dev
-```
+   ```
 
 6. Build and run the production server:
     ```bash
