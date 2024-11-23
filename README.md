@@ -55,16 +55,18 @@ This project is a backend implementation for a **Booking.com clone**. It provide
   * Use the provided SQL scripts to initialize the MySQL schema.
   * Run the seed scripts to populate sample data:
     ```bash
-      npm run seed```
+    npm run seed
+```
 
 5. Start the development server:
     ```bash
-      npm run dev```
+    npm run dev
+```
 
 6. Build and run the production server:
     ```bash
-      npm run build
-      npm start```
+    npm run build
+    npm start```
 
 ### API Endpoints
 **Authentication**
@@ -93,7 +95,6 @@ This project is a backend implementation for a **Booking.com clone**. It provide
 * npm run build: Compile the TypeScript code to JavaScript.
 * npm start: Start the production server.
 * npm run seed: Seed the database with initial data.
-* npm run seed:reviews: Seed the database with reviews.
   
 ### Folder Structure
    ```bash
@@ -104,7 +105,8 @@ This project is a backend implementation for a **Booking.com clone**. It provide
    ├── middleware/        # Custom middleware functions
    ├── utils/             # Utility functions (e.g., email notifications)
    ├── config/            # Database and environment configurations
-   └── index.ts           # Entry point of the application ```
+   └── index.ts           # Entry point of the application 
+```
 
 ### Future Improvements
    Implement advanced search filters (e.g., nearby attractions, room types).
