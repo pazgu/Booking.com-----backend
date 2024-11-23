@@ -1,4 +1,4 @@
-# Booking.com Clone - Backend
+# 🏨 Booking.com Clone - Backend
 
 This project is a backend implementation for a **Booking.com clone**. It provides APIs to manage hotel reservations, user authentication, reviews, and more. Built with Node.js, TypeScript, and Express, this backend is designed to be robust and scalable.
 
