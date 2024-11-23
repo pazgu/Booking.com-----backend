@@ -17,7 +17,7 @@ This project is a backend implementation for a **Booking.com clone**. It provide
 - **Express.js**: Web framework for routing and middleware.
 - **TypeScript**: Strongly typed JavaScript for maintainable and error-free code.
 - **MySQL**: Relational database for storing hotel, user, and reservation data.
-- **Mongoose**: Object Data Modeling (ODM) for MongoDB (for specific features, like reviews).
+- **MongoDB**: Non-relational database for storing users.
 - **JWT**: JSON Web Token for secure authentication.
 - **Nodemailer**: Email service for sending notifications.
 - **dotenv**: Manage environment variables.
