@@ -2,7 +2,7 @@
 
 This project is a backend implementation for a **Booking.com clone**. It provides APIs to manage hotel reservations, user authentication, reviews, and more. Built with Node.js, TypeScript, and Express, this backend is designed to be robust and scalable.
 
-## Features
+## ✨Features
 
 - **User Authentication**: Secure login and registration using JWT and password hashing with `bcryptjs`.
 - **Hotel Management**: Manage hotels, rooms, and availability.
@@ -11,7 +11,7 @@ This project is a backend implementation for a **Booking.com clone**. It provide
 - **Reviews**: Users can leave and view reviews for hotels.
 - **Email Notifications**: Reservation confirmations sent via email using `nodemailer`.
 
-## Tech Stack
+## 💻 Tech Stack
 
 - **Node.js**: Runtime environment for building server-side applications.
 - **Express.js**: Web framework for routing and middleware.
@@ -22,7 +22,7 @@ This project is a backend implementation for a **Booking.com clone**. It provide
 - **Nodemailer**: Email service for sending notifications.
 - **dotenv**: Manage environment variables.
 
-## Installation
+## ⚡ Installation
 
 ### Prerequisites
 
@@ -69,7 +69,7 @@ This project is a backend implementation for a **Booking.com clone**. It provide
     npm start
     ```
 
-### API Endpoints
+### 🌐 API Endpoints
 **Authentication**
 * POST /api/auth/register: Register a new user.
 * POST /api/auth/login: Login and receive a JWT.
@@ -97,7 +97,7 @@ This project is a backend implementation for a **Booking.com clone**. It provide
 * npm start: Start the production server.
 * npm run seed: Seed the database with initial data.
   
-### Folder Structure
+### 📂 Folder Structure
    ```bash
       src/
    ├── controllers/       # Define the business logic for API endpoints
