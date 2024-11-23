@@ -38,17 +38,77 @@ This project is a backend implementation for a **Booking.com clone**. It provide
    cd booking-clone-backend```
 
 2. Install dependencies:
-```npm install ```
+   ```npm install ```
 
 3. Configure environment variables: Create a .env file in the root directory with the following variables:
-```PORT=5000
-MYSQL_HOST=your-mysql-host
-MYSQL_USER=your-mysql-username
-MYSQL_PASSWORD=your-mysql-password
-MYSQL_DATABASE=your-database-name
-JWT_SECRET=your-secret-key
-EMAIL_USER=your-email
-EMAIL_PASS=your-email-password
-```
+   ```PORT=5000
+   MYSQL_HOST=your-mysql-host
+   MYSQL_USER=your-mysql-username
+   MYSQL_PASSWORD=your-mysql-password
+   MYSQL_DATABASE=your-database-name
+   JWT_SECRET=your-secret-key
+   EMAIL_USER=your-email
+   EMAIL_PASS=your-email-password
+   ```
 
 4. Set up the database:
+  * Use the provided SQL scripts to initialize the MySQL schema.
+  * Run the seed scripts to populate sample data:
+    ```bash
+   npm run seed```
+
+5. Start the development server:
+    ```bash
+   npm run dev```
+
+6. Build and run the production server:
+    ```bash
+   npm run build
+   npm start```
+
+### API Endpoints
+**Authentication**
+* POST /api/auth/register: Register a new user.
+* POST /api/auth/login: Login and receive a JWT.
+  
+**Hotels**
+* GET /api/hotels: Fetch hotels with filters and pagination.
+* POST /api/hotels: Add a new hotel (admin only).
+* GET /api/hotels/:id: Get details of a specific hotel.
+  
+**Rooms**
+* GET /api/rooms: Fetch available rooms for a hotel.
+* POST /api/rooms: Add a new room to a hotel.
+  
+**Reservations**
+* POST /api/reservations: Create a reservation.
+* GET /api/reservations/:id: Get details of a reservation.
+
+**Reviews**
+* POST /api/reviews: Add a review for a hotel.
+* GET /api/reviews/:hotelId: Fetch reviews for a hotel.
+  
+### Scripts
+* npm run dev: Run the server in development mode with nodemon.
+* npm run build: Compile the TypeScript code to JavaScript.
+* npm start: Start the production server.
+* npm run seed: Seed the database with initial data.
+* npm run seed:reviews: Seed the database with reviews.
+  
+### Folder Structure
+   ```bash
+      src/
+   ├── controllers/       # Define the business logic for API endpoints
+   ├── routes/            # Define API routes
+   ├── models/            # Database schemas and models
+   ├── middleware/        # Custom middleware functions
+   ├── utils/             # Utility functions (e.g., email notifications)
+   ├── config/            # Database and environment configurations
+   └── index.ts           # Entry point of the application```
+
+### Future Improvements
+   Implement advanced search filters (e.g., nearby attractions, room types).
+   Integrate payment gateways for secure online payments.
+   Add real-time availability updates with WebSockets.
+
+
